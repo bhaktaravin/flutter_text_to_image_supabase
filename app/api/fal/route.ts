@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Key ${falApiKey}`,
+        "Authorization": `Key ${process.env.FAL_API_KEY}`,
       },
       body: JSON.stringify({ prompt }),
     });
