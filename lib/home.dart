@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+// ...existing code...
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:fal_client/fal_client.dart';
@@ -113,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return;
     }
-    if (falApiKey == null || falApiKey!.isEmpty) {
+    if (falApiKey == null || falApiKey!.isEmpty || fal == null) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -123,30 +122,23 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse('https://fal.ai/recraft/v3/text-to-images'),
-        headers: {
-          'Authorization': 'Bearer $falApiKey',
-          'Content-Type': 'application/json',
+      final output = await fal!.subscribe(
+        "fal-ai/recraft/v3/text-to-image",
+        input: {"prompt": prompt},
+        logs: true,
+        webhookUrl: "https://optional.webhook.url/for/results",
+        onQueueUpdate: (update) {
+          print(update);
         },
-        body: jsonEncode({'prompt': prompt, 'n': 1, 'size': '1024x1024'}),
       );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (mounted) {
-          setState(() {
-            imageUrl = data['data'][0]['url'];
-          });
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error generating image: ${response.statusCode}'),
-            ),
-          );
-        }
+      print(output.requestId);
+      print(output.data);
+      if (mounted &&
+          output.data['images'] != null &&
+          output.data['images'].isNotEmpty) {
+        setState(() {
+          imageUrl = output.data['images'][0]['url'];
+        });
       }
     } catch (e) {
       if (mounted) {
