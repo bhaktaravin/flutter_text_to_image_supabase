@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     });
     const data = await response.json();
     console.log("Fal.ai response:", data);
-    console.error("Fal.ai error:", data);   
+    console.log("Fal.ai error:", data);   
     
     if (!response.ok) {
       console.error("Fal.ai error:", data);
