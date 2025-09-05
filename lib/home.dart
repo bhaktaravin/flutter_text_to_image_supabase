@@ -17,6 +17,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? falApiKey;
   FalClient? fal;
   bool _loadingApiKey = true;
+  bool _generating = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -85,16 +87,35 @@ class _HomeScreenState extends State<HomeScreen> {
             controller: _controller,
             decoration: InputDecoration(labelText: 'Enter prompt'),
           ),
+          if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(_errorMessage!, style: TextStyle(color: Colors.red)),
+            ),
           _loadingApiKey
               ? Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: CircularProgressIndicator(),
                 )
               : ElevatedButton(
-                  onPressed: (falApiKey == null || falApiKey!.isEmpty)
+                  onPressed:
+                      (falApiKey == null || falApiKey!.isEmpty || _generating)
                       ? null
                       : () => generateImage(_controller.text),
-                  child: Text('Generate Image'),
+                  child: _generating
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 8),
+                            Text('Generating...'),
+                          ],
+                        )
+                      : Text('Generate Image'),
                 ),
           if (imageUrl != null && imageUrl!.isNotEmpty)
             Expanded(child: Image.network(imageUrl!)),
@@ -105,21 +126,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> generateImage(String prompt) async {
     if (prompt.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Please enter a prompt')));
-      }
+      setState(() {
+        _errorMessage = 'Please enter a prompt';
+      });
       return;
     }
     if (falApiKey == null || falApiKey!.isEmpty || fal == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('API key not loaded')));
-      }
+      setState(() {
+        _errorMessage = 'API key not loaded';
+      });
       return;
     }
+
+    setState(() {
+      _generating = true;
+      _errorMessage = null;
+    });
 
     try {
       final output = await fal!.subscribe(
@@ -142,9 +164,15 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        setState(() {
+          _errorMessage = 'Error: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _generating = false;
+        });
       }
     }
   }
