@@ -19,3 +19,8 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./
+
+      - name: Trigger Vercel Deploy Hook
+        if: github.ref == 'refs/heads/main'
+        run: |
+          curl -X POST https://api.vercel.com/v1/integrations/deploy/prj_7bRoIgDggSOU5yYQfTBkdb7bQh8o/dWHNviRIMs
