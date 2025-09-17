@@ -304,6 +304,13 @@ export default function Page() {
                 >Logout</button>
               </div>
             )}
+            {/* Add Register/Login button for all users */}
+            {!user && (
+              <button
+                onClick={() => setShowAuth(true)}
+                style={{ width: "100%", padding: "10px", borderRadius: 8, background: "#0070f3", color: "#fff", fontWeight: 600, border: "none", marginBottom: "1rem", cursor: "pointer" }}
+              >Register / Login</button>
+            )}
             <input
               type="text"
               value={prompt}

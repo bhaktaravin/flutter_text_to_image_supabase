@@ -42,15 +42,20 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: supabaseError.message }), { status: 500 });
     }
 
-    // 3. Store user profile in Firestore
-    const db = getFirestore(firebaseApp);
-    await setDoc(doc(db, "users", user.email), {
-      email: user.email,
-      name: user.name || "",
-      lastPrompt: prompt,
-      lastImageUrl: imageUrl,
-      updatedAt: new Date(),
-    }, { merge: true });
+    // 3. Store user profile in Firestore (non-blocking)
+    try {
+      const db = getFirestore(firebaseApp);
+      await setDoc(doc(db, "users", user.email), {
+        email: user.email,
+        name: user.name || "",
+        lastPrompt: prompt,
+        lastImageUrl: imageUrl,
+        updatedAt: new Date(),
+      }, { merge: true });
+    } catch (firestoreError) {
+      console.error("Firestore error:", firestoreError);
+      // Optionally, you can add error info to the response if needed
+    }
 
     return new Response(JSON.stringify({ imageUrl, prompt, user }), { status: 200 });
   } catch (error) {
