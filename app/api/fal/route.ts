@@ -1,5 +1,8 @@
 import { NextRequest } from "next/server";
 
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
 export async function POST(req: NextRequest) {
   const { prompt } = await req.json();
   if (!prompt) {

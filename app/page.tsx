@@ -38,7 +38,21 @@ export default function Page() {
       const data = res.data;
       console.log("Fal.ai response:", data); // Debug log
       if (res.status === 200 && (data.image_url || data.images?.[0]?.url || data.result?.image_url)) {
-        setImageUrl(data.image_url || data.images?.[0]?.url || data.result?.image_url);
+        const generatedUrl = data.image_url || data.images?.[0]?.url || data.result?.image_url;
+        setImageUrl(generatedUrl);
+
+        // Upload image to Firebase Storage
+        try {
+          const filename = `generated-${Date.now()}.png`;
+          await fetch("/api/images/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl: generatedUrl, filename }),
+          });
+        } catch (uploadErr) {
+          console.error("Error uploading image to Firebase:", uploadErr);
+        }
+
         if (!user) {
           // Guest logic
           const newCount = (guestCount ?? 0) + 1;
