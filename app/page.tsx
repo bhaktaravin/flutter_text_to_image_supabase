@@ -10,7 +10,7 @@ export default function Page() {
   const [error, setError] = useState("");
   const [guestCount, setGuestCount] = useState<number | undefined>(undefined);
   const [showAuth, setShowAuth] = useState(false);
-  const [user, setUser] = useState<{ email: string } | null | undefined>(undefined);
+  const [user, setUser] = useState<{ email: string; name?: string } | null | undefined>(undefined);
   const [history, setHistory] = useState([]);
   const [hydrated, setHydrated] = useState(false);
 
@@ -34,26 +34,28 @@ export default function Page() {
     setError("");
     setImageUrl("");
     try {
-      const res = await axios.post("/api/fal", { prompt });
+      // Send prompt and user info to backend
+      const res = await axios.post("/api/fal", {
+        prompt,
+        user: user ? { email: user.email, name: user.name || "" } : { email: "guest", name: "Guest" }
+      });
       const data = res.data;
       console.log("Fal.ai response:", data); // Debug log
-      if (res.status === 200 && (data.image_url || data.images?.[0]?.url || data.result?.image_url)) {
-        const generatedUrl = data.image_url || data.images?.[0]?.url || data.result?.image_url;
-        setImageUrl(generatedUrl);
+      if (res.status === 200 && data.imageUrl) {
+        setImageUrl(data.imageUrl);
+        // Optionally upload to Firebase Storage if needed
+        // try {
+        //   const filename = `generated-${Date.now()}.png`;
+        //   await fetch("/api/images/upload", {
+        //     method: "POST",
+        //     headers: { "Content-Type": "application/json" },
+        //     body: JSON.stringify({ imageUrl: data.imageUrl, filename }),
+        //   });
+        // } catch (uploadErr) {
+        //   console.error("Error uploading image to Firebase:", uploadErr);
+        // }
 
-        // Upload image to Firebase Storage
-        try {
-          const filename = `generated-${Date.now()}.png`;
-          await fetch("/api/images/upload", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ imageUrl: generatedUrl, filename }),
-          });
-        } catch (uploadErr) {
-          console.error("Error uploading image to Firebase:", uploadErr);
-        }
-
-        if (!user) {
+        if (!user || user.email === "guest") {
           // Guest logic
           const newCount = (guestCount ?? 0) + 1;
           setGuestCount(newCount);
