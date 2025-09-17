@@ -8,6 +8,7 @@ export default function Page() {
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Remove guest limit logic
   const [guestCount, setGuestCount] = useState<number | undefined>(undefined);
   const [showAuth, setShowAuth] = useState(false);
   const [user, setUser] = useState<{ email: string; name?: string } | null | undefined>(undefined);
@@ -16,9 +17,9 @@ export default function Page() {
   const [model, setModel] = useState("fal-ai");
 
   useEffect(() => {
-    const count = parseInt(localStorage.getItem("guestCount") || "0", 10);
-    setGuestCount(count);
-    if (count >= 5) setShowAuth(true);
+  // Remove guest limit logic
+  setGuestCount(0);
+  setShowAuth(false);
     // Check for user session
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -45,12 +46,9 @@ export default function Page() {
       console.log("Image response:", data); // Debug log
       if (res.status === 200 && data.imageUrl) {
         setImageUrl(data.imageUrl);
+        // No guest limit, allow unlimited generations
         if (!user || user.email === "guest") {
-          // Guest logic
-          const newCount = (guestCount ?? 0) + 1;
-          setGuestCount(newCount);
-          localStorage.setItem("guestCount", newCount.toString());
-          if (newCount >= 5) setShowAuth(true);
+          // Guest logic: do nothing
         } else {
           // Save prompt for logged-in user
           await axios.post("/api/prompts/save", { prompt, email: user.email });
@@ -337,9 +335,10 @@ export default function Page() {
                 </span>
               ) : "Generate Image"}
             </button>
+            {/* Clarify open access for all users */}
             {!user && (
-              <p style={{ color: "#fff", marginTop: "1rem", textAlign: "center" }}>
-                Guest uses left: {5 - guestCount}
+              <p style={{ color: "#4caf50", marginTop: "1rem", textAlign: "center", fontWeight: 600 }}>
+                Anyone can use this app and generate unlimited images without registering or logging in.
               </p>
             )}
             {error && <p style={{ color: "#ff4d4f", marginTop: "1rem", textAlign: "center" }}>{error}</p>}
