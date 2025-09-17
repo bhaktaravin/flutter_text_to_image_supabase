@@ -7,7 +7,7 @@ set-github-secrets.sh
 /.pnp
 .pnp.*
 .yarn/*
-!.yarn/patches
+!.yarn/patchest
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions

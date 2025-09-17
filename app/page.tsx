@@ -13,6 +13,7 @@ export default function Page() {
   const [user, setUser] = useState<{ email: string; name?: string } | null | undefined>(undefined);
   const [history, setHistory] = useState([]);
   const [hydrated, setHydrated] = useState(false);
+  const [model, setModel] = useState("fal-ai");
 
   useEffect(() => {
     const count = parseInt(localStorage.getItem("guestCount") || "0", 10);
@@ -34,27 +35,16 @@ export default function Page() {
     setError("");
     setImageUrl("");
     try {
-      // Send prompt and user info to backend
+      // Send prompt, model, and user info to backend
       const res = await axios.post("/api/fal", {
         prompt,
+        model,
         user: user ? { email: user.email, name: user.name || "" } : { email: "guest", name: "Guest" }
       });
       const data = res.data;
-      console.log("Fal.ai response:", data); // Debug log
+      console.log("Image response:", data); // Debug log
       if (res.status === 200 && data.imageUrl) {
         setImageUrl(data.imageUrl);
-        // Optionally upload to Firebase Storage if needed
-        // try {
-        //   const filename = `generated-${Date.now()}.png`;
-        //   await fetch("/api/images/upload", {
-        //     method: "POST",
-        //     headers: { "Content-Type": "application/json" },
-        //     body: JSON.stringify({ imageUrl: data.imageUrl, filename }),
-        //   });
-        // } catch (uploadErr) {
-        //   console.error("Error uploading image to Firebase:", uploadErr);
-        // }
-
         if (!user || user.email === "guest") {
           // Guest logic
           const newCount = (guestCount ?? 0) + 1;
@@ -311,6 +301,19 @@ export default function Page() {
                 style={{ width: "100%", padding: "10px", borderRadius: 8, background: "#0070f3", color: "#fff", fontWeight: 600, border: "none", marginBottom: "1rem", cursor: "pointer" }}
               >Register / Login</button>
             )}
+            {/* Model selection dropdown */}
+            <select
+              value={model}
+              onChange={e => setModel(e.target.value)}
+              style={{ width: "100%", padding: "10px", marginBottom: "1rem", borderRadius: "8px", border: "1px solid #444", fontSize: "1rem" }}
+            >
+              <option value="fal-ai">Fal.ai</option>
+              <option value="deepai">DeepAI</option>
+              <option value="replicate">Replicate (free tier)</option>
+              <option value="stablediffusionapi">Stable Diffusion API (free tier)</option>
+              <option value="openai">OpenAI DALL·E (limited free)</option>
+              {/* Add more models here as needed */}
+            </select>
             <input
               type="text"
               value={prompt}

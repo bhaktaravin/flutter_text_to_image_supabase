@@ -6,34 +6,59 @@ import { app as firebaseApp } from "@/lib/firebaseClient";
 
 
 export async function POST(req: NextRequest) {
-  const { prompt, user } = await req.json();
-  if (!prompt || !user) {
-    return new Response(JSON.stringify({ error: "Prompt and user required" }), { status: 400 });
+  const { prompt, user, model } = await req.json();
+  if (!prompt || !user || !model) {
+    return new Response(JSON.stringify({ error: "Prompt, user, and model required" }), { status: 400 });
   }
 
+  let imageUrl = "";
+  let errorMsg = "";
+
   try {
-    const falApiKey = process.env.FAL_API_KEY;
-    if (!falApiKey) {
-      console.error("FAL_API_KEY is missing");
-      return new Response(JSON.stringify({ error: "API key missing" }), { status: 500 });
-    }
-    // 1. Generate image from fal.ai
-    const response = await fetch("https://fal.run/fal-ai/stable-diffusion-v35-large", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Key ${falApiKey}`,
-      },
-      body: JSON.stringify({ prompt }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("Fal.ai error:", data);
-      return new Response(JSON.stringify({ error: data.error || "Fal.ai error", details: data }), { status: response.status });
+    if (model === "fal-ai") {
+      const falApiKey = process.env.FAL_API_KEY;
+      if (!falApiKey) {
+        console.error("FAL_API_KEY is missing");
+        return new Response(JSON.stringify({ error: "API key missing" }), { status: 500 });
+      }
+      const response = await fetch("https://fal.run/fal-ai/stable-diffusion-v35-large", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Key ${falApiKey}`,
+        },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await response.json();
+      imageUrl = data.image_url || data.images?.[0]?.url || data.result?.image_url;
+      if (!response.ok) errorMsg = data.error || "Fal.ai error";
+    } else if (model === "deepai") {
+      // Use DEEPAI_API_KEY from environment
+      const DEEPAI_API_KEY = process.env.DEEPAI_API_KEY;
+      if (!DEEPAI_API_KEY) {
+        console.error("DEEPAI_API_KEY is missing");
+        return new Response(JSON.stringify({ error: "DeepAI API key missing" }), { status: 500 });
+      }
+      const response = await fetch("https://api.deepai.org/api/text2img", {
+        method: "POST",
+        headers: {
+          "Api-Key": DEEPAI_API_KEY,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `text=${encodeURIComponent(prompt)}`,
+      });
+      const data = await response.json();
+      imageUrl = data.output_url;
+      if (!response.ok) errorMsg = data.error || "DeepAI error";
+    } else {
+      errorMsg = "Model not supported yet.";
     }
 
-    // 2. Store prompt and image URL in Supabase
-    const imageUrl = data.image_url || data.images?.[0]?.url || data.result?.image_url;
+    if (errorMsg) {
+      return new Response(JSON.stringify({ error: errorMsg }), { status: 400 });
+    }
+
+    // Store prompt and image URL in Supabase
     const { error: supabaseError } = await supabase.from("images").insert([
       { prompt, image_url: imageUrl, user_email: user.email, created_at: new Date().toISOString() }
     ]);
@@ -42,7 +67,7 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: supabaseError.message }), { status: 500 });
     }
 
-    // 3. Store user profile in Firestore (non-blocking)
+    // Store user profile in Firestore (non-blocking)
     try {
       const db = getFirestore(firebaseApp);
       await setDoc(doc(db, "users", user.email), {
@@ -54,7 +79,6 @@ export async function POST(req: NextRequest) {
       }, { merge: true });
     } catch (firestoreError) {
       console.error("Firestore error:", firestoreError);
-      // Optionally, you can add error info to the response if needed
     }
 
     return new Response(JSON.stringify({ imageUrl, prompt, user }), { status: 200 });
