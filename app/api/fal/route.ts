@@ -7,6 +7,8 @@ import { app as firebaseApp } from "@/lib/firebaseClient";
 
 export async function POST(req: NextRequest) {
   const { prompt, user, model } = await req.json();
+  console.log("Received model:", model);
+  console.log("Received prompt:", prompt);
   if (!prompt || !user || !model) {
     return new Response(JSON.stringify({ error: "Prompt, user, and model required" }), { status: 400 });
   }
@@ -49,7 +51,11 @@ export async function POST(req: NextRequest) {
       });
       const data = await response.json();
       imageUrl = data.output_url;
-      if (!response.ok) errorMsg = data.error || "DeepAI error";
+      if (!response.ok) {
+        // Log and return full DeepAI error message
+        console.error("DeepAI error response:", data);
+        errorMsg = data.error || JSON.stringify(data) || "DeepAI error";
+      }
     } else {
       errorMsg = "Model not supported yet.";
     }
